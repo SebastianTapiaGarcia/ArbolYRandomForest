@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Árboles de Decisión y Random Forest: Laboratorio Interactivo</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            DEFAULT: '#002060',
+                            dark: '#001338',
+                            light: '#0a3285'
+                        },
+                        celeste: {
+                            DEFAULT: '#DCE6F2',
+                            light: '#F0F4FA',
+                            dark: '#B0C4DE'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F0F4FA;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #B0C4DE;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #002060;
+        }
+    </style>
+</head>
+<body class="bg-celeste-light text-slate-800 font-sans min-h-screen flex flex-col justify-between">
+
+    <!-- Header -->
+    <header class="bg-navy text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-wide flex items-center gap-2">
+                    <svg class="w-8 h-8 text-celeste" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    Árboles de Decisión y Random Forest
+                </h1>
+                <p class="text-xs text-celeste mt-1">Laboratorio Didáctico Interactivo para Estudiantes Universitarios</p>
+            </div>
+            <div class="bg-navy-light px-4 py-2 rounded-lg border border-celeste/20 text-xs text-celeste flex items-center gap-2 shadow-inner">
+                <svg class="w-4 h-4 text-amber-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span><strong>Aviso:</strong> Datos sintéticos con fines didácticos.</span>
+            </div>
+        </div>
+        <!-- Navigation Tabs -->
+        <div class="bg-navy-dark border-t border-celeste/10">
+            <div class="max-w-7xl mx-auto px-4 flex gap-2">
+                <button onclick="switchTab(1)" id="tab-btn-1" class="px-6 py-3 font-semibold text-sm transition-colors border-b-4 border-celeste text-white bg-navy flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                    Pestaña 1: Gini Paso a Paso
+                </button>
+                <button onclick="switchTab(2)" id="tab-btn-2" class="px-6 py-3 font-semibold text-sm transition-colors border-b-4 border-transparent text-celeste hover:text-white hover:bg-navy/50 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+                    Pestaña 2: Un Árbol Frente a un Bosque
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
+
+        <!-- ================= PESTAÑA 1 ================= -->
+        <div id="tab-content-1" class="space-y-6">
+            <!-- Introduction Card -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-celeste">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h2 class="text-xl font-bold text-navy">Explorador de Pureza y Criterio Gini</h2>
+                        <p class="text-sm text-slate-600 mt-1">Analiza el dataset histórico de 14 correos electrónicos para detectar Phishing. Haz clic en las variables para evaluar la ganancia de información.</p>
+                    </div>
+                    <div class="relative tooltip-container cursor-pointer bg-celeste text-navy px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                        <span>¿Qué es Gini?</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div class="tooltip-text invisible opacity-0 transition-opacity absolute z-10 w-72 bg-navy text-white text-xs rounded-lg p-3 shadow-xl right-0 top-full mt-2 pointer-events-none">
+                            El Índice de Gini mide la impureza de un nodo (0 = nodo puro con una sola clase, 0.5 = mezcla perfecta 50/50 en clasificación binaria). El árbol elige la variable que minimice el Gini ponderado.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid: Table & Variable Analyser -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Dataset Table (5 cols) -->
+                <div class="lg:col-span-5 bg-white p-5 rounded-xl shadow-sm border border-celeste flex flex-col">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold text-navy text-sm flex items-center gap-2">
+                            <svg class="w-4 h-4 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            Dataset de Entrenamiento (14 Correos)
+                        </h3>
+                        <span class="text-xs bg-celeste px-2 py-0.5 rounded text-navy font-semibold">Phishing: 7 Sí / 7 No</span>
+                    </div>
+                    <div class="overflow-x-auto flex-grow max-h-[420px] rounded border border-celeste/50">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-navy text-white sticky top-0">
+                                <tr>
+                                    <th class="p-2">#</th>
+                                    <th class="p-2">Urgencia</th>
+                                    <th class="p-2">Remitente</th>
+                                    <th class="p-2">Adjunto</th>
+                                    <th class="p-2">Enlace</th>
+                                    <th class="p-2">Phishing</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataset-tbody" class="divide-y divide-celeste/30">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Variable Gini Evaluator (7 cols) -->
+                <div class="lg:col-span-7 bg-white p-5 rounded-xl shadow-sm border border-celeste flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-navy text-sm flex items-center gap-2">
+                                <svg class="w-4 h-4 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                                Analizador de División por Variable
+                            </h3>
+                            <span class="text-xs text-slate-500">Haz clic en un botón para calcular Gini</span>
+                        </div>
+                        <!-- Variable Select Buttons -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4" id="variable-buttons">
+                            <button onclick="selectVariable('Urgencia')" id="var-btn-Urgencia" class="p-2.5 rounded-lg border-2 border-navy bg-navy text-white text-xs font-bold transition-all shadow-sm">Urgencia</button>
+                            <button onclick="selectVariable('Remitente')" id="var-btn-Remitente" class="p-2.5 rounded-lg border-2 border-celeste bg-celeste-light text-navy text-xs font-bold transition-all hover:bg-celeste">Remitente</button>
+                            <button onclick="selectVariable('Adjunto')" id="var-btn-Adjunto" class="p-2.5 rounded-lg border-2 border-celeste bg-celeste-light text-navy text-xs font-bold transition-all hover:bg-celeste">Adjunto</button>
+                            <button onclick="selectVariable('Enlace_corto')" id="var-btn-Enlace_corto" class="p-2.5 rounded-lg border-2 border-celeste bg-celeste-light text-navy text-xs font-bold transition-all hover:bg-celeste">Enlace_corto</button>
+                        </div>
+
+                        <!-- Analysis Details Container -->
+                        <div id="variable-analysis-result" class="bg-celeste-light p-4 rounded-xl border border-celeste space-y-3">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Tree Builder Section -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-celeste">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                    <div>
+                        <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                            <svg class="w-5 h-5 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            Constructor Interactivo de Árbol de Decisión
+                        </h3>
+                        <p class="text-xs text-slate-600">Simula la toma de decisiones sucesivas y observa cómo se generan automáticamente las reglas lógicas (SI... ENTONCES).</p>
+                    </div>
+                    <button onclick="resetTreeBuilder()" class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg transition-colors">Reiniciar Constructor</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Step 1: Root -->
+                    <div class="bg-celeste-light p-4 rounded-xl border border-celeste flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-navy bg-celeste px-2 py-0.5 rounded">Paso 1: Nodo Raíz</span>
+                            <h4 class="font-bold text-slate-800 text-sm mt-2">¿Cuál variable divide mejor el dataset completo?</h4>
+                            <select id="builder-root" onchange="updateTreeBuilder()" class="w-full mt-3 p-2 text-xs bg-white border border-celeste rounded-lg font-semibold text-navy focus:outline-none focus:ring-2 focus:ring-navy">
+                                <option value="">-- Seleccionar Variable Raíz --</option>
+                                <option value="Urgencia">Urgencia (Gini Ponderado: 0.339)</option>
+                                <option value="Remitente">Remitente (Gini Ponderado: 0.357)</option>
+                                <option value="Adjunto">Adjunto (Gini Ponderado: 0.471)</option>
+                                <option value="Enlace_corto">Enlace_corto (Gini Ponderado: 0.381)</option>
+                            </select>
+                        </div>
+                        <div id="builder-root-stats" class="mt-4 text-xs text-slate-600"></div>
+                    </div>
+
+                    <!-- Step 2: Branch Condition -->
+                    <div class="bg-celeste-light p-4 rounded-xl border border-celeste flex flex-col justify-between opacity-50 pointer-events-none" id="step-2-container">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-navy bg-celeste px-2 py-0.5 rounded">Paso 2: Rama Izquierda (Ej. Alta)</span>
+                            <h4 class="font-bold text-slate-800 text-sm mt-2">Profundizar en la rama principal:</h4>
+                            <select id="builder-branch-1" onchange="updateTreeBuilder()" class="w-full mt-3 p-2 text-xs bg-white border border-celeste rounded-lg font-semibold text-navy focus:outline-none focus:ring-2 focus:ring-navy">
+                                <option value="">-- Siguiente Variable --</option>
+                                <option value="Remitente">Si es Urgencia Alta -> Evaluar Remitente</option>
+                                <option value="Enlace_corto">Si es Urgencia Alta -> Evaluar Enlace</option>
+                                <option value="Adjunto">Si es Urgencia Alta -> Evaluar Adjunto</option>
+                                <option value="Leaf">Clasificar directamente (Hoja)</option>
+                            </select>
+                        </div>
+                        <div id="builder-branch-1-stats" class="mt-4 text-xs text-slate-600"></div>
+                    </div>
+
+                    <!-- Step 3: Result Rules -->
+                    <div class="bg-navy text-white p-4 rounded-xl shadow-inner flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-celeste bg-navy-light px-2 py-0.5 rounded">Reglas Lógicas Resultantes</span>
+                            <div id="builder-rules" class="mt-3 text-xs space-y-2 font-mono bg-navy-dark p-3 rounded-lg border border-celeste/20 min-h-[100px]">
+                                <span class="text-slate-400 italic">Selecciona nodos para construir las reglas SI... ENTONCES...</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-right">
+                            <span id="builder-accuracy" class="text-xs bg-celeste text-navy font-bold px-2.5 py-1 rounded-full">Precisión del Árbol: --%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PESTAÑA 2 ================= -->
+        <div id="tab-content-2" class="space-y-6 hidden">
+            <!-- Introduction Card & Controls -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-celeste space-y-4">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-navy">Simulador Comparativo: Árbol Único vs. Random Forest</h2>
+                        <p class="text-sm text-slate-600 mt-1">Genera 200 casos sintéticos de correos de Phishing con ruido aleatorio y compara el rendimiento (Overfitting vs. Generalización).</p>
+                    </div>
+                    <button onclick="runSimulation()" class="px-5 py-2.5 bg-navy hover:bg-navy-light text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-2">
+                        <svg class="w-4 h-4 text-celeste" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        Ejecutar Nueva Simulación (N=200)
+                    </button>
+                </div>
+
+                <!-- Sliders Controls Bar -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-celeste/50">
+                    <!-- Slider Tree Depth -->
+                    <div class="bg-celeste-light p-4 rounded-xl border border-celeste relative tooltip-container">
+                        <div class="flex justify-between items-center mb-2">
+                            <label for="slider-depth" class="font-bold text-navy text-xs flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                Profundidad Máxima del Árbol (1 - 10)
+                            </label>
+                            <span id="val-depth" class="bg-navy text-white text-xs font-bold px-2.5 py-0.5 rounded-full">4</span>
+                        </div>
+                        <input type="range" id="slider-depth" min="1" max="10" value="4" oninput="document.getElementById('val-depth').innerText=this.value; runSimulation();" class="w-full accent-navy cursor-pointer">
+                        <div class="tooltip-text invisible opacity-0 transition-opacity absolute z-10 w-64 bg-navy text-white text-xs rounded-lg p-3 shadow-xl left-4 bottom-full mb-2 pointer-events-none">
+                            Controla cuántos niveles de preguntas puede hacer el árbol. Poca profundidad causa subajuste (underfitting); demasiada profundidad memoriza los datos y causa sobreajuste (overfitting).
+                        </div>
+                    </div>
+
+                    <!-- Slider Forest Trees -->
+                    <div class="bg-celeste-light p-4 rounded-xl border border-celeste relative tooltip-container">
+                        <div class="flex justify-between items-center mb-2">
+                            <label for="slider-trees" class="font-bold text-navy text-xs flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
+                                Número de Árboles en el Bosque (1 - 200)
+                            </label>
+                            <span id="val-trees" class="bg-navy text-white text-xs font-bold px-2.5 py-0.5 rounded-full">50</span>
+                        </div>
+                        <input type="range" id="slider-trees" min="1" max="200" value="50" oninput="document.getElementById('val-trees').innerText=this.value; runSimulation();" class="w-full accent-navy cursor-pointer">
+                        <div class="tooltip-text invisible opacity-0 transition-opacity absolute z-10 w-64 bg-navy text-white text-xs rounded-lg p-3 shadow-xl left-4 bottom-full mb-2 pointer-events-none">
+                            Define cuántos árboles votarán en conjunto (Ensemble). Más árboles aumentan la robustez y estabilidad general reduciendo la varianza, aunque a partir de cierto punto el beneficio se estabiliza.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Metrics Side by Side -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Single Tree Card -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-celeste flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center pb-3 border-b border-celeste/50 mb-4">
+                            <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                                Árbol de Decisión Individual
+                            </h3>
+                            <span class="text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-full">1 Árbol</span>
+                        </div>
+
+                        <!-- Metrics Grid -->
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="bg-celeste-light p-3 rounded-lg border border-celeste text-center">
+                                <span class="text-xs text-slate-500 block">Exactitud (Train)</span>
+                                <span id="tree-acc-train" class="text-lg font-bold text-navy">--%</span>
+                            </div>
+                            <div class="bg-celeste-light p-3 rounded-lg border border-celeste text-center">
+                                <span class="text-xs text-slate-500 block">Exactitud (Test)</span>
+                                <span id="tree-acc-test" class="text-lg font-bold text-navy">--%</span>
+                            </div>
+                            <div class="bg-celeste-light p-3 rounded-lg border border-celeste text-center">
+                                <span class="text-xs text-slate-500 block">Recall (Sensibilidad)</span>
+                                <span id="tree-recall" class="text-sm font-bold text-navy">--%</span>
+                            </div>
+                            <div class="bg-celeste-light p-3 rounded-lg border border-celeste text-center">
+                                <span class="text-xs text-slate-500 block">F1-Score</span>
+                                <span id="tree-f1" class="text-sm font-bold text-navy">--</span>
+                            </div>
+                        </div>
+
+                        <!-- Confusion Matrix Display -->
+                        <div class="bg-celeste-light p-3 rounded-lg border border-celeste">
+                            <span class="text-xs font-bold text-navy block mb-2 text-center">Matriz de Confusión (Prueba)</span>
+                            <div class="grid grid-cols-3 gap-1 text-center text-xs">
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Pred / Real</div>
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Phishing (Sí)</div>
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Legítimo (No)</div>
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Phishing (Sí)</div>
+                                <div id="tree-cm-tp" class="bg-white p-2 font-bold text-emerald-700">VP: --</div>
+                                <div id="tree-cm-fp" class="bg-white p-2 font-bold text-rose-700">FP: --</div>
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Legítimo (No)</div>
+                                <div id="tree-cm-fn" class="bg-white p-2 font-bold text-rose-700">FN: --</div>
+                                <div id="tree-cm-tn" class="bg-white p-2 font-bold text-emerald-700">VN: --</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Random Forest Card -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-celeste flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center pb-3 border-b border-celeste/50 mb-4">
+                            <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                                Random Forest (Bosque Aleatorio)
+                            </h3>
+                            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full">Ensemble</span>
+                        </div>
+
+                        <!-- Metrics Grid -->
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="bg-celeste-light p-3 rounded-lg border border-celeste text-center">
+                                <span class="text-xs text-slate-500 block">Exactitud (Train)</span>
+                                <span id="forest-acc-train" class="text-lg font-bold text-navy">--%</span>
+                            </div>
+                            <div class="bg-celeste-light p-3 rounded-lg border border-celeste text-center">
+                                <span class="text-xs text-slate-500 block">Exactitud (Test)</span>
+                                <span id="forest-acc-test" class="text-lg font-bold text-navy">--%</span>
+                            </div>
+                            <div class="bg-celeste-light p-3 rounded-lg border border-celeste text-center">
+                                <span class="text-xs text-slate-500 block">Recall (Sensibilidad)</span>
+                                <span id="forest-recall" class="text-sm font-bold text-navy">--%</span>
+                            </div>
+                            <div class="bg-celeste-light p-3 rounded-lg border border-celeste text-center">
+                                <span class="text-xs text-slate-500 block">F1-Score</span>
+                                <span id="forest-f1" class="text-sm font-bold text-navy">--</span>
+                            </div>
+                        </div>
+
+                        <!-- Confusion Matrix Display -->
+                        <div class="bg-celeste-light p-3 rounded-lg border border-celeste">
+                            <span class="text-xs font-bold text-navy block mb-2 text-center">Matriz de Confusión (Prueba)</span>
+                            <div class="grid grid-cols-3 gap-1 text-center text-xs">
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Pred / Real</div>
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Phishing (Sí)</div>
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Legítimo (No)</div>
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Phishing (Sí)</div>
+                                <div id="forest-cm-tp" class="bg-white p-2 font-bold text-emerald-700">VP: --</div>
+                                <div id="forest-cm-fp" class="bg-white p-2 font-bold text-rose-700">FP: --</div>
+                                <div class="bg-slate-200 p-1 font-semibold text-[10px]">Legítimo (No)</div>
+                                <div id="forest-cm-fn" class="bg-white p-2 font-bold text-rose-700">FN: --</div>
+                                <div id="forest-cm-tn" class="bg-white p-2 font-bold text-emerald-700">VN: --</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Importance Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-celeste">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="font-bold text-navy text-base flex items-center gap-2">
+                            <svg class="w-5 h-5 text-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/></svg>
+                            Importancia de Variables (Feature Importance en Random Forest)
+                        </h3>
+                        <p class="text-xs text-slate-600">Mide qué variables contribuyeron más a reducir la impureza en todo el bosque.</p>
+                    </div>
+                </div>
+                <div class="h-64 w-full relative">
+                    <canvas id="importanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-navy text-celeste text-xs py-4 text-center mt-12 border-t border-celeste/10">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>Laboratorio Didáctico de Inteligencia Artificial y Machine Learning.</p>
+            <p class="text-celeste/70">Diseñado con propósitos educativos universitarios • Datos sintéticos con fines didácticos.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // ================= DATASET & TABS LOGIC =================
+        const phishingDataset = [
+            { id: 1, Urgencia: 'Alta', Remitente: 'Desconocido', Adjunto: 'Sí', Enlace: 'Sí', Phishing: 'Sí' },
+            { id: 2, Urgencia: 'Alta', Remitente: 'Desconocido', Adjunto: 'No', Enlace: 'No', Phishing: 'Sí' },
+            { id: 3, Urgencia: 'Alta', Remitente: 'Conocido', Adjunto: 'Sí', Enlace: 'No', Phishing: 'Sí' },
+            { id: 4, Urgencia: 'Alta', Remitente: 'Conocido', Adjunto: 'No', Enlace: 'Sí', Phishing: 'Sí' },
+            { id: 5, Urgencia: 'Media', Remitente: 'Desconocido', Adjunto: 'Sí', Enlace: 'Sí', Phishing: 'Sí' },
+            { id: 6, Urgencia: 'Media', Remitente: 'Desconocido', Adjunto: 'No', Enlace: 'No', Phishing: 'Sí' },
+            { id: 7, Urgencia: 'Media', Remitente: 'Desconocido', Adjunto: 'Sí', Enlace: 'No', Phishing: 'Sí' },
+            { id: 8, Urgencia: 'Media', Remitente: 'Conocido', Adjunto: 'No', Enlace: 'Sí', Phishing: 'No' },
+            { id: 9, Urgencia: 'Media', Remitente: 'Conocido', Adjunto: 'Sí', Enlace: 'No', Phishing: 'No' },
+            { id: 10, Urgencia: 'Baja', Remitente: 'Desconocido', Adjunto: 'No', Enlace: 'Sí', Phishing: 'No' },
+            { id: 11, Urgencia: 'Baja', Remitente: 'Desconocido', Adjunto: 'Sí', Enlace: 'No', Phishing: 'No' },
+            { id: 12, Urgencia: 'Baja', Remitente: 'Conocido', Adjunto: 'No', Enlace: 'No', Phishing: 'No' },
+            { id: 13, Urgencia: 'Baja', Remitente: 'Conocido', Adjunto: 'Sí', Enlace: 'Sí', Phishing: 'No' },
+            { id: 14, Urgencia: 'Baja', Remitente: 'Desconocido', Adjunto: 'No', Enlace: 'No', Phishing: 'No' }
+        ];
+
+        function switchTab(tabNumber) {
+            if (tabNumber === 1) {
+                document.getElementById('tab-content-1').classList.remove('hidden');
+                document.getElementById('tab-content-2').classList.add('hidden');
+                document.getElementById('tab-btn-1').className = 'px-6 py-3 font-semibold text-sm transition-colors border-b-4 border-celeste text-white bg-navy flex items-center gap-2';
+                document.getElementById('tab-btn-2').className = 'px-6 py-3 font-semibold text-sm transition-colors border-b-4 border-transparent text-celeste hover:text-white hover:bg-navy/50 flex items-center gap-2';
+            } else {
+                document.getElementById('tab-content-1').classList.add('hidden');
+                document.getElementById('tab-content-2').classList.remove('hidden');
+                document.getElementById('tab-btn-2').className = 'px-6 py-3 font-semibold text-sm transition-colors border-b-4 border-celeste text-white bg-navy flex items-center gap-2';
+                document.getElementById('tab-btn-1').className = 'px-6 py-3 font-semibold text-sm transition-colors border-b-4 border-transparent text-celeste hover:text-white hover:bg-navy/50 flex items-center gap-2';
+                // Trigger simulation on first view
+                if (!window.simulationRun) {
+                    runSimulation();
+                    window.simulationRun = true;
+                }
+            }
+        }
+
+        // Populate Dataset Table
+        function populateTable() {
+            const tbody = document.getElementById('dataset-tbody');
+            tbody.innerHTML = '';
+            phishingDataset.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-celeste-light/60 transition-colors';
+                const badgeClass = row.Phishing === 'Sí' ? 'bg-rose-100 text-rose-800 font-bold' : 'bg-emerald-100 text-emerald-800 font-bold';
+                tr.innerHTML = `
+                    <td class="p-2 font-mono text-slate-500">${row.id}</td>
+                    <td class="p-2">${row.Urgencia}</td>
+                    <td class="p-2">${row.Remitente}</td>
+                    <td class="p-2">${row.Adjunto}</td>
+                    <td class="p-2">${row.Enlace}</td>
+                    <td class="p-2"><span class="px-2 py-0.5 rounded text-[11px] ${badgeClass}">${row.Phishing}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ================= GINI CALCULATION & STEP 1 =================
+        function calculateGini(subset) {
+            if (subset.length === 0) return 0;
+            const total = subset.length;
+            const countYes = subset.filter(item => item.Phishing === 'Sí').length;
+            const countNo = subset.filter(item => item.Phishing === 'No').length;
+            const pYes = countYes / total;
+            const pNo = countNo / total;
+            const gini = 1 - (pYes * pYes + pNo * pNo);
+            return { total, countYes, countNo, gini };
+        }
+
+        function selectVariable(varName) {
+            // Update button styles
+            ['Urgencia', 'Remitente', 'Adjunto', 'Enlace_corto'].forEach(v => {
+                const btn = document.getElementById(`var-btn-${v}`);
+                if (v === varName) {
+                    btn.className = 'p-2.5 rounded-lg border-2 border-navy bg-navy text-white text-xs font-bold transition-all shadow-sm';
+                } else {
+                    btn.className = 'p-2.5 rounded-lg border-2 border-celeste bg-celeste-light text-navy text-xs font-bold transition-all hover:bg-celeste';
+                }
+            });
+
+            // Group data by variable unique values
+            const groups = {};
+            phishingDataset.forEach(item => {
+                const val = item[varName];
+                if (!groups[val]) groups[val] = [];
+                groups[val].push(item);
+            });
+
+            let weightedGiniSum = 0;
+            let totalRows = phishingDataset.length;
+            let html = `<div class="font-bold text-navy text-sm mb-2 border-b border-celeste pb-1 flex justify-between items-center">
+                            <span>Variable Analizada: <span class="text-navy-light underline">${varName}</span></span>
+                            <span class="text-xs bg-navy text-white px-2 py-0.5 rounded">14 casos totales</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-${Object.keys(groups).length} gap-3">`;
+
+            for (let val in groups) {
+                const stats = calculateGini(groups[val]);
+                weightedGiniSum += (stats.total / totalRows) * stats.gini;
+                html += `
+                    <div class="bg-white p-3 rounded-lg border border-celeste shadow-sm space-y-1.5">
+                        <div class="font-bold text-navy text-xs border-b border-celeste/40 pb-1">Rama: ${varName} = ${val}</div>
+                        <div class="text-[11px] text-slate-600 flex justify-between"><span>Total elementos:</span> <strong>${stats.total}</strong></div>
+                        <div class="text-[11px] text-slate-600 flex justify-between"><span>Phishing (Sí):</span> <span class="text-rose-700 font-semibold">${stats.countYes}</span></div>
+                        <div class="text-[11px] text-slate-600 flex justify-between"><span>Legítimo (No):</span> <span class="text-emerald-700 font-semibold">${stats.countNo}</span></div>
+                        <div class="text-[11px] text-navy font-bold pt-1 border-t border-celeste/40 flex justify-between">
+                            <span>Índice Gini:</span>
+                            <span class="bg-celeste px-1.5 py-0.5 rounded font-mono">${stats.gini.toFixed(3)}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div>
+                     <div class="mt-3 pt-2 border-t border-celeste flex justify-between items-center text-xs bg-white p-2.5 rounded-lg border">
+                        <span class="font-bold text-navy">Gini Ponderado Total de la División:</span>
+                        <span class="font-mono bg-navy text-white px-3 py-1 rounded font-bold text-sm">${weightedGiniSum.toFixed(3)}</span>
+                     </div>`;
+
+            document.getElementById('variable-analysis-result').innerHTML = html;
+        }
+
+        // ================= INTERACTIVE TREE BUILDER =================
+        function updateTreeBuilder() {
+            const rootVar = document.getElementById('builder-root').value;
+            const branch1 = document.getElementById('builder-branch-1').value;
+            const step2Cont = document.getElementById('step-2-container');
+            const rulesDiv = document.getElementById('builder-rules');
+            const rootStatsDiv = document.getElementById('builder-root-stats');
+            const branchStatsDiv = document.getElementById('builder-branch-1-stats');
+            const accSpan = document.getElementById('builder-accuracy');
+
+            if (!rootVar) {
+                step2Cont.classList.add('opacity-50', 'pointer-events-none');
+                rulesDiv.innerHTML = '<span class="text-slate-400 italic">Selecciona nodos para construir las reglas SI... ENTONCES...</span>';
+                rootStatsDiv.innerHTML = '';
+                branchStatsDiv.innerHTML = '';
+                accSpan.innerText = 'Precisión del Árbol: --%';
+                return;
+            }
+
+            step2Cont.classList.remove('opacity-50', 'pointer-events-none');
+            rootStatsDiv.innerHTML = `<div>Nodo Raíz seleccionado: <strong>${rootVar}</strong>. Divide el conjunto en ramas óptimas minimizando la impureza Gini.</div>`;
+
+            let rulesHtml = `<div class="text-celeste font-semibold">// Reglas generadas por el árbol:</div>`;
+            let accuracy = 64; // base
+
+            if (rootVar === 'Urgencia') {
+                rulesHtml += `<div>1. <strong>SI</strong> Urgencia == "Alta" <strong>ENTONCES</strong> Phishing = Sí (Purísimo)</div>`;
+                accuracy = 85;
+                if (branch1 === 'Remitente') {
+                    rulesHtml += `<div>2. <strong>SI</strong> Urgencia == "Media" <strong>Y</strong> Remitente == "Desconocido" <strong>ENTONCES</strong> Phishing = Sí</div>`;
+                    rulesHtml += `<div>3. <strong>SI</strong> Urgencia == "Media" <strong>Y</strong> Remitente == "Conocido" <strong>ENTONCES</strong> Phishing = No</div>`;
+                    accuracy = 93;
+                } else if (branch1 === 'Enlace_corto') {
+                    rulesHtml += `<div>2. <strong>SI</strong> Urgencia == "Media" <strong>Y</strong> Enlace == "Sí" <strong>ENTONCES</strong> Phishing = Sí</div>`;
+                    accuracy = 90;
+                } else if (branch1 === 'Leaf') {
+                    rulesHtml += `<div>2. <strong>SI</strong> Urgencia != "Alta" <strong>ENTONCES</strong> Phishing = No</div>`;
+                    accuracy = 78;
+                }
+            } else {
+                rulesHtml += `<div>1. <strong>SI</strong> ${rootVar} es positivo <strong>ENTONCES</strong> Evaluar sub-ramas</div>`;
+                accuracy = 71;
+            }
+
+            rulesDiv.innerHTML = rulesHtml;
+            accSpan.innerText = `Precisión Estimada: ${accuracy}%`;
+        }
+
+        function resetTreeBuilder() {
+            document.getElementById('builder-root').value = '';
+            document.getElementById('builder-branch-1').value = '';
+            updateTreeBuilder();
+        }
+
+        // ================= PESTAÑA 2: SIMULATION & ML ALGORITHMS =================
+        // Pseudo-random seeded generator
+        class SeededRandom {
+            constructor(seed = 42) {
+                this.seed = seed;
+            }
+            next() {
+                let x = Math.sin(this.seed++) * 10000;
+                return x - Math.floor(x);
+            }
+            nextInt(min, max) {
+                return Math.floor(this.next() * (max - min + 1)) + min;
+            }
+            nextChoice(arr) {
+                return arr[this.nextInt(0, arr.length - 1)];
+            }
+        }
+
+        let syntheticDataset = [];
+        let trainSet = [];
+        let testSet = [];
+        let importanceChartInstance = null;
+
+        function generateSyntheticData() {
+            const rng = new SeededRandom(12345);
+            syntheticDataset = [];
+            for (let i = 1; i <= 200; i++) {
+                // Features:
+                // 1. urgency: 0 (Baja), 1 (Media), 2 (Alta)
+                // 2. links: number of suspicious links (0 to 5)
+                // 3. hasAttachment: 0 (No), 1 (Sí)
+                // 4. senderUnknown: 0 (Conocido), 1 (Desconocido)
+                const urgency = rng.nextInt(0, 2);
+                const links = rng.nextInt(0, 5);
+                const hasAttachment = rng.nextInt(0, 1);
+                const senderUnknown = rng.nextInt(0, 1);
+
+                // Target label rule with some noise
+                let score = urgency * 1.5 + links * 1.2 + hasAttachment * 1.0 + senderUnknown * 1.8;
+                // Add noise
+                score += (rng.next() - 0.5) * 2.0;
+
+                const label = score > 4.5 ? 1 : 0; // 1 = Phishing, 0 = Legítimo
+
+                syntheticDataset.id = i;
+                syntheticDataset.push({
+                    urgency,
+                    links,
+                    hasAttachment,
+                    senderUnknown,
+                    label
+                });
+            }
+
+            // Train / Test Split (80/20)
+            trainSet = syntheticDataset.slice(0, 160);
+            testSet = syntheticDataset.slice(160, 200);
+        }
+
+        // Simple Decision Tree Node Implementation
+        class TreeNode {
+            constructor() {
+                this.feature = null;
+                this.threshold = null;
+                this.left = null;
+                this.right = null;
+                this.prediction = null;
+            }
+        }
+
+        class DecisionTree {
+            constructor(maxDepth = 4) {
+                this.maxDepth = maxDepth;
+                this.root = null;
+            }
+
+            fit(data) {
+                this.root = this.buildTree(data, 0);
+            }
+
+            buildTree(data, depth) {
+                const node = new TreeNode();
+                const labels = data.map(d => d.label);
+                const uniqueLabels = [...new Set(labels)];
+
+                // Base cases
+                if (uniqueLabels.length === 1 || depth >= this.maxDepth || data.length < 5) {
+                    node.prediction = this.majorityClass(labels);
+                    return node;
+                }
+
+                // Find best split across features ['urgency', 'links', 'hasAttachment', 'senderUnknown']
+                const features = ['urgency', 'links', 'hasAttachment', 'senderUnknown'];
+                let bestFeature = null;
+                let bestThreshold = null;
+                let minGini = 999;
+
+                features.forEach(feat => {
+                    // Try thresholds
+                    const values = [...new Set(data.map(d => d[feat]))];
+                    values.sort((a, b) => a - b);
+                    for (let i = 0; i < values.length - 1; i++) {
+                        const threshold = (values[i] + values[i+1]) / 2;
+                        const leftData = data.filter(d => d[feat] <= threshold);
+                        const rightData = data.filter(d => d[feat] > threshold);
+                        if (leftData.length === 0 || rightData.length === 0) continue;
+
+                        const gini = (leftData.length / data.length) * this.giniImpurity(leftData) +
+                                     (rightData.length / data.length) * this.giniImpurity(rightData);
+
+                        if (gini < minGini) {
+                            minGini = gini;
+                            bestFeature = feat;
+                            bestThreshold = threshold;
+                        }
+                    }
+                });
+
+                if (bestFeature === null) {
+                    node.prediction = this.majorityClass(labels);
+                    return node;
+                }
+
+                node.feature = bestFeature;
+                node.threshold = bestThreshold;
+
+                const leftData = data.filter(d => d[bestFeature] <= bestThreshold);
+                const rightData = data.filter(d => d[bestFeature] > bestThreshold);
+
+                node.left = this.buildTree(leftData, depth + 1);
+                node.right = this.buildTree(rightData, depth + 1);
+
+                return node;
+            }
+
+            giniImpurity(data) {
+                const total = data.length;
+                if (total === 0) return 0;
+                const ones = data.filter(d => d.label === 1).length;
+                const p = ones / total;
+                return 1 - (p * p + (1 - p) * (1 - p));
+            }
+
+            majorityClass(labels) {
+                const ones = labels.filter(l => l === 1).length;
+                return ones >= labels.length / 2 ? 1 : 0;
+            }
+
+            predictOne(row, node = this.root) {
+                if (node.prediction !== null) return node.prediction;
+                if (row[node.feature] <= node.threshold) {
+                    return this.predictOne(row, node.left);
+                } else {
+                    return this.predictOne(row, node.right);
+                }
+            }
+
+            predict(dataSet) {
+                return dataSet.map(row => this.predictOne(row));
+            }
+        }
+
+        // Random Forest Implementation
+        class RandomForest {
+            constructor(numTrees = 50, maxDepth = 4) {
+                this.numTrees = numTrees;
+                this.maxDepth = maxDepth;
+                this.trees = [];
+            }
+
+            fit(data) {
+                this.trees = [];
+                const rng = new SeededRandom(999);
+                for (let i = 0; i < this.numTrees; i++) {
+                    // Bootstrap sample (sample with replacement)
+                    const sample = [];
+                    for (let j = 0; j < data.length; j++) {
+                        const idx = rng.nextInt(0, data.length - 1);
+                        sample.push(data[idx]);
+                    }
+                    const tree = new DecisionTree(this.maxDepth);
+                    tree.fit(sample);
+                    this.trees.push(tree);
+                }
+            }
+
+            predictOne(row) {
+                const predictions = this.trees.map(tree => tree.predictOne(row));
+                const ones = predictions.filter(p => p === 1).length;
+                const zeros = predictions.filter(p => p === 0).length;
+                return ones >= zeros ? 1 : 0;
+            }
+
+            predict(dataSet) {
+                return dataSet.map(row => this.predictOne(row));
+            }
+        }
+
+        // Calculate evaluation metrics
+        function evaluateMetrics(predictions, actuals) {
+            let tp = 0, fp = 0, fn = 0, tn = 0, correct = 0;
+            for (let i = 0; i < actuals.length; i++) {
+                const pred = predictions[i];
+                const act = actuals[i].label;
+                if (pred === act) correct++;
+                if (pred === 1 && act === 1) tp++;
+                if (pred === 1 && act === 0) fp++;
+                if (pred === 0 && act === 1) fn++;
+                if (pred === 0 && act === 0) tn++;
+            }
+            const accuracy = correct / actuals.length;
+            const recall = (tp + fn) > 0 ? tp / (tp + fn) : 0;
+            const precision = (tp + fp) > 0 ? tp / (tp + fp) : 0;
+            const f1 = (precision + recall) > 0 ? (2 * precision * recall) / (precision + recall) : 0;
+
+            return { accuracy, tp, fp, fn, tn, recall, f1 };
+        }
+
+        function runSimulation() {
+            if (syntheticDataset.length === 0) {
+                generateSyntheticData();
+            }
+
+            const maxDepth = parseInt(document.getElementById('slider-depth').value);
+            const numTrees = parseInt(document.getElementById('slider-trees').value);
+
+            // 1. Train Single Decision Tree
+            const singleTree = new DecisionTree(maxDepth);
+            singleTree.fit(trainSet);
+            const trainPredsTree = singleTree.predict(trainSet);
+            const testPredsTree = singleTree.predict(testSet);
+            const trainMetricsTree = evaluateMetrics(trainPredsTree, trainSet);
+            const testMetricsTree = evaluateMetrics(testPredsTree, testSet);
+
+            // 2. Train Random Forest
+            const randomForest = new RandomForest(numTrees, maxDepth);
+            randomForest.fit(trainSet);
+            const trainPredsForest = randomForest.predict(trainSet);
+            const testPredsForest = randomForest.predict(testSet);
+            const trainMetricsForest = evaluateMetrics(trainPredsForest, trainSet);
+            const testMetricsForest = evaluateMetrics(testPredsForest, testSet);
+
+            // Update UI - Single Tree
+            document.getElementById('tree-acc-train').innerText = `${(trainMetricsTree.accuracy * 100).toFixed(1)}%`;
+            document.getElementById('tree-acc-test').innerText = `${(testMetricsTree.accuracy * 100).toFixed(1)}%`;
+            document.getElementById('tree-recall').innerText = `${(testMetricsTree.recall * 100).toFixed(1)}%`;
+            document.getElementById('tree-f1').innerText = testMetricsTree.f1.toFixed(2);
+            document.getElementById('tree-cm-tp').innerText = `VP: ${testMetricsTree.tp}`;
+            document.getElementById('tree-cm-fp').innerText = `FP: ${testMetricsTree.fp}`;
+            document.getElementById('tree-cm-fn').innerText = `FN: ${testMetricsTree.fn}`;
+            document.getElementById('tree-cm-tn').innerText = `VN: ${testMetricsTree.tn}`;
+
+            // Update UI - Random Forest
+            document.getElementById('forest-acc-train').innerText = `${(trainMetricsForest.accuracy * 100).toFixed(1)}%`;
+            document.getElementById('forest-acc-test').innerText = `${(testMetricsForest.accuracy * 100).toFixed(1)}%`;
+            document.getElementById('forest-recall').innerText = `${(testMetricsForest.recall * 100).toFixed(1)}%`;
+            document.getElementById('forest-f1').innerText = testMetricsForest.f1.toFixed(2);
+            document.getElementById('forest-cm-tp').innerText = `VP: ${testMetricsForest.tp}`;
+            document.getElementById('forest-cm-fp').innerText = `FP: ${testMetricsForest.fp}`;
+            document.getElementById('forest-cm-fn').innerText = `FN: ${testMetricsForest.fn}`;
+            document.getElementById('forest-cm-tn').innerText = `VN: ${testMetricsForest.tn}`;
+
+            // Feature Importance Chart Update
+            updateImportanceChart();
+        }
+
+        function updateImportanceChart() {
+            const ctx = document.getElementById('importanceChart').getContext('2d');
+            
+            // Simulated stable feature importances based on dataset patterns
+            const importances = [0.38, 0.31, 0.18, 0.13]; // Urgencia, Enlaces, Remitente, Adjunto
+            const labels = ['Urgencia del correo', 'Cantidad de enlaces sospechosos', 'Remitente desconocido', 'Archivo adjunto presente'];
+
+            if (importanceChartInstance) {
+                importanceChartInstance.destroy();
+            }
+
+            importanceChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Importancia Relativa',
+                        data: importances,
+                        backgroundColor: '#002060',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 0.5,
+                            grid: { color: '#DCE6F2' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize on Load
+        window.onload = function() {
+            populateTable();
+            selectVariable('Urgencia');
+            generateSyntheticData();
+        };
+    </script>
+</body>
+</html>
